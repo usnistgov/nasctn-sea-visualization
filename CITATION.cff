@@ -4,7 +4,7 @@ authors:
 - family-names: "Sanders"
   given-names: "Aric"
   orcid: "https://orcid.org/0000-0002-2305-543X"
-title: "Univariate Tools"
+title: "nasctn-sea-visualization"
 version: 0.1.0
 date-released: 2025-07-18
-url: "https://github.com/usnistgov/univariate_tools"
+url: "https://github.com/usnistgov/nasctn-sea-visualization"
