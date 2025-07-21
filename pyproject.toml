@@ -24,7 +24,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = []
+dependencies = [
+    "nasctn-sea-ingest @ git+https://github.com/usnistgov/nasctn-sea-ingest@1.0.0",
+]
 
 [project.urls]
 Documentation = "https://github.com/sandersa/nasctn-sea-visualization#readme"
@@ -32,7 +34,7 @@ Issues = "https://github.com/sandersa/nasctn-sea-visualization/issues"
 Source = "https://github.com/sandersa/nasctn-sea-visualization"
 
 [tool.hatch.version]
-path = "nasctn_sea_visualization/__about__.py"
+path = "nasctn_sea_visualization/__init__.py"
 
 [tool.hatch.envs.types]
 extra-dependencies = [
