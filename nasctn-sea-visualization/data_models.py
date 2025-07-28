@@ -5,7 +5,8 @@
 # Created:     2025/08/25
 # License:     NIST License
 # -----------------------------------------------------------------------------
-"""data_models.py is a module that adds functionality to https://github.com/usnistgov/nasctn-sea-ingest. The data models are intended to lower the barrier of entry to plotting and data analysis
+"""data_models.py is a module that adds functionality to https://github.com/usnistgov/nasctn-sea-ingest. 
+The data models are intended to lower the barrier of entry to plotting and data analysis.
 """
 # -----------------------------------------------------------------------------
 # Standard Imports

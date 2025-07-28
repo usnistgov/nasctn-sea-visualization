@@ -5,7 +5,7 @@
 # Created:     
 # License:     NIST License
 # -----------------------------------------------------------------------------
-"""plotters.py is a module designed to encapsulate a data_model from data_models.py and provide visualizations for 
+"""plotters.py is a module designed to encapsulate a data_model from data_models.py and provide visualizations for SEA-Data.
 """
 # -----------------------------------------------------------------------------
 # Standard Imports
@@ -40,6 +40,36 @@ sys.path.append(os.path.join(os.path.dirname( __file__ ),'.'))
 # Module Constants
 # -----------------------------------------------------------------------------
 # Module Functions
+def plot_psd_comparison(repository_ = r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\PSD",
+                        sensors = ["HU","CBBT-Directional"],
+                        dates = ["2025-02-21","2025-02-23","2025-03-14"],
+                        psd_stream="max",**options):
+    """Plots a comparison of power spectral densities from the flat tables stored in SEA-DATA/PSD. Inputs are
+    sensors: A list of common names (see data_models.SENSOR_COMMON_NAMES),
+    dates: A list of strings of dates in YYYY-MM-DD format, and psd_stream: The percentile (max, median, 99th_percentile)"""
+    defaults = {"figsize":(20,24),
+                "save":False,
+                "show":True}
+    plot_options = {}
+    for key,value in defaults.items():
+        plot_options[key] = value
+    for key,value in options.items():
+        plot_options[key] = value
+    figure,axs = plt.subplots(nrows=len(dates),ncols=len(sensors),figsize=plot_options["figsize"])
+    for date_index,date in enumerate(dates):
+        for sensor_index,sensor in enumerate(sensors):
+            ax =axs[date_index][sensor_index]
+            psd_df = pd.read_csv(os.path.join(repository_,date+"_"+sensor+f"_{psd_stream}.csv"),index_col=0)
+            psd_df.index = pd.to_datetime(psd_df.index,format='mixed')
+            ax.pcolormesh(1e-6*psd_df.columns.astype(float),psd_df.index,psd_df)
+            ax.set_xlabel("Frequency (MHz)")
+            ax.set_ylabel("Time (UTC)")
+            ax.set_title(f"{sensor}:{date}")
+    plt.tight_layout()
+    if plot_options["save"]:
+        plt.savefig(plot_options["save"])
+    if plot_options["show"]:
+        plt.show()
 
 def dbsum(x):
     y = np.sum(10 ** (x / 10))
@@ -766,7 +796,7 @@ class DataProductPlotter():
                 plt.show()  
                 
     def plot_gains(self,**options):
-            """Plots the apd for the selected capture, provide the capture_id as a dictionary"""
+            """Plots the gain for the selected capture across all frequencies."""
             defaults = {"legend":False,
                         "save":False,
                         "show":True,
@@ -791,7 +821,7 @@ class DataProductPlotter():
                 plt.show()      
 
     def plot_noise_figures(self,**options):
-            """Plots the apd for the selected capture, provide the capture_id as a dictionary"""
+            """Plots the noise figures for the selected capture across all frequencies."""
             defaults = {"legend":False,
                         "save":False,
                         "show":True,
@@ -965,22 +995,22 @@ class SummaryPlotter():
 # Module Scripts
 
 
-def test_single_plotter(test_data = r".\test data\2024_6_14_21_37_1.sigmf",**options):
+def test_single_plotter(test_data = r".\resources\test data\2024_6_14_21_37_1.sigmf",**options):
     data_product = DataProduct(test_data)
     plotter = DataProductPlotter(data_product)
     plotter.plot_all_psds(show=True)
 
-def test_pfp_histogram(test_data = r".\test data\2024_6_14_21_37_1.sigmf",**options):
+def test_pfp_histogram(test_data = r".\resources\test data\2024_6_14_21_37_1.sigmf",**options):
     data_product = DataProduct(test_data)
     plotter = DataProductPlotter(data_product)
     plotter.plot_channel_pfp_hist(channel=5,show=True)
 
-def test_block_plotter(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",**options):
+def test_block_plotter(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",**options):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_day(show=True)
 
-def test_slice(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",slice_time ="2024-07-04 12:00" ,**options):
+def test_slice(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",slice_time ="2024-07-04 12:00" ,**options):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_day(show=True,annotation_date = slice_time)
@@ -988,7 +1018,7 @@ def test_slice(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",sli
     single_plotter = DataProductPlotter(slice)
     single_plotter.plot_channel_summary(channel = slice.frequencies[10],show=True)
 
-def test_summary_plotter(test_data = r".\test data\2024_7.csv"):
+def test_summary_plotter(test_data = r".\resources\test data\2024_7.csv"):
     summary = SummaryTable(test_data)
     plotter = SummaryPlotter(summary)
     plotter.plot_all_sensor_heatmaps(show =True,sensors = ["GMM"],streams=["max","mean","PAPR"])
@@ -998,17 +1028,17 @@ def test_summary_plotter_2(test_data = r"D:\SEA\Tier 2\summaries\2024_9.csv"):
     plotter = SummaryPlotter(summary)
     plotter.plot_all_sensor_heatmaps(show =True,streams=["max","mean","PAPR"])
 
-def test_summary_scatterplot(test_data =r".\test data\2024_7.csv"):
+def test_summary_scatterplot(test_data =r".\resources\test data\2024_7.csv"):
     summary = SummaryTable(test_data)
     plotter = SummaryPlotter(summary)
     plotter.plot_scatter_summary(show =True)
 
-def test_psd_day_plot(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",capture_statistic="mean"):
+def test_psd_day_plot(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",capture_statistic="mean"):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_day_psd(show=True,capture_statistic=capture_statistic)
 
-def test_pfp_day_plot(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",channel =5,capture_statistic="mean"):
+def test_pfp_day_plot(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",channel =5,capture_statistic="mean"):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_aligned_pfp(channel=channel,show=True,capture_statistic=capture_statistic)
