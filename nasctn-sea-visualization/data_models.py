@@ -156,7 +156,7 @@ def fetch_lte_template(file_path = LTE_TTI_CONFIG_PATH):
 # -----------------------------------------------------------------------------
 # Module Classes
 class DataProduct():
-    """Wraps the sea_ingest dictionary of pandas data frames that represents a single acquistion of the sea sensor  """
+    """Wraps the sea_ingest dictionary of pandas data frames that represents a single acquisition of the sea sensor  """
     def __init__(self,data,**options) -> None:
         if isinstance(data,str):
             if re.search(".sigmf",data):
