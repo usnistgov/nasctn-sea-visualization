@@ -568,6 +568,51 @@ def summarize_block(file_name,root_directory,verbose):
                 continue
         return data
     
+def summarize_block_calibration(file_name,root_directory,verbose):
+    data = []
+    match = re.match(DATABLOCK_PATTERN,file_name)
+    if match:
+        fixed_data_row = {}
+        sensor_name = match.groupdict()["sensor_hostname"]
+        date = match.groupdict()["date"]
+        if sensor_name in SENSOR_COMMON_NAMES.keys():
+            sensor = SENSOR_COMMON_NAMES[sensor_name]
+            sensor_hostname = sensor_name
+        elif sensor_name in SENSOR_COMMON_NAMES.values():
+            sensor = sensor_name
+            sensor_hostname = get_sensor_ip_from_name(sensor_name)
+        fixed_data_row["sensor_hostname"] = sensor_hostname
+        fixed_data_row["date"] = date
+        fixed_data_row["sensor_name"] = SENSOR_COMMON_NAMES[fixed_data_row["sensor_hostname"]]
+        fixed_data_row["sensor_id"] = SENSOR_IDS[fixed_data_row["sensor_hostname"]]
+        file_path = os.path.join(root_directory,file_name)
+        zip_file = zipfile.ZipFile(file_path)
+        for sigmf in zip_file.filelist:
+            with zip_file.open(sigmf.filename) as infile:
+                metadata = sea_ingest.read_seamf_meta(infile)
+            if verbose:
+                print(f'the file path is {file_path}')
+            try:
+                # Load data and metadata
+                fixed_data_row['file'] = file_path
+
+                for capture_index,capture in enumerate(metadata.captures):
+                    data_row = dict(fixed_data_row)
+                    data_row["channel"] = capture_index
+                    data_row["channel_frequency_mhz"] = capture['core:frequency']*1e-6
+                    data_row["timestamp"] = pd.to_datetime(capture['core:datetime'])
+                    data_row["acquisition_timestamp"] = pd.to_datetime(metadata.captures[0]['core:datetime'])
+                    data_row["max"]=metadata.global_.max_of_max_channel_powers[capture_index]
+                    data_row["median"]=metadata.global_.median_channel_powers[capture_index]
+                    data_row["mean"]=metadata.global_.mean_channel_powers[capture_index]
+                    data_row["overload"] = capture['ntia-sensor:overload']
+                    data_row.update(capture["ntia-sensor:sensor_calibration"])
+                    data.append(data_row)
+            except Exception as e:
+                print(e)
+                continue
+        return data
+    
 def create_summary_table_data_blocks(top_directory = None,file_names = None,save = None,
                                      verbose =False,sort_timestamps=True, relative_filenames  = True):
     """ Creates the summary table from a directory of raw files. Returns a pandas dataframe."""
