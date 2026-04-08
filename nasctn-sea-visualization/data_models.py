@@ -106,6 +106,7 @@ def lin_sum(array):
     alin = 10**(array/10)
     alin = alin.sum()
     return 10*np.log10(alin)
+
 def fetch_lte_template(file_path = LTE_TTI_CONFIG_PATH):
     ## Importing the Resource Element Utilization of LTE
     # The LTE xlsx were built by transcribing from: https://dhagle.in/LTE.php
