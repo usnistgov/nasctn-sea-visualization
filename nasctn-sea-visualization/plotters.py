@@ -5,14 +5,14 @@
 # Created:     
 # License:     NIST License
 # -----------------------------------------------------------------------------
-"""plotters.py is a module designed to encapsulate a data_model from data_models.py and provide visualizations for SEA-Data.
+"""plotters.py is a module designed to encapsulate a data_model from data_models.py and provide visualizations for 
 """
 # -----------------------------------------------------------------------------
 # Standard Imports
 import numpy as np
 import lzma
 import os 
-import numexpr as ne
+#import numexpr as ne
 import tarfile
 import json
 import re
@@ -40,36 +40,6 @@ sys.path.append(os.path.join(os.path.dirname( __file__ ),'.'))
 # Module Constants
 # -----------------------------------------------------------------------------
 # Module Functions
-def plot_psd_comparison(repository_ = r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\PSD",
-                        sensors = ["HU","CBBT-Directional"],
-                        dates = ["2025-02-21","2025-02-23","2025-03-14"],
-                        psd_stream="max",**options):
-    """Plots a comparison of power spectral densities from the flat tables stored in SEA-DATA/PSD. Inputs are
-    sensors: A list of common names (see data_models.SENSOR_COMMON_NAMES),
-    dates: A list of strings of dates in YYYY-MM-DD format, and psd_stream: The percentile (max, median, 99th_percentile)"""
-    defaults = {"figsize":(20,24),
-                "save":False,
-                "show":True}
-    plot_options = {}
-    for key,value in defaults.items():
-        plot_options[key] = value
-    for key,value in options.items():
-        plot_options[key] = value
-    figure,axs = plt.subplots(nrows=len(dates),ncols=len(sensors),figsize=plot_options["figsize"])
-    for date_index,date in enumerate(dates):
-        for sensor_index,sensor in enumerate(sensors):
-            ax =axs[date_index][sensor_index]
-            psd_df = pd.read_csv(os.path.join(repository_,date+"_"+sensor+f"_{psd_stream}.csv"),index_col=0)
-            psd_df.index = pd.to_datetime(psd_df.index,format='mixed')
-            ax.pcolormesh(1e-6*psd_df.columns.astype(float),psd_df.index,psd_df)
-            ax.set_xlabel("Frequency (MHz)")
-            ax.set_ylabel("Time (UTC)")
-            ax.set_title(f"{sensor}:{date}")
-    plt.tight_layout()
-    if plot_options["save"]:
-        plt.savefig(plot_options["save"])
-    if plot_options["show"]:
-        plt.show()
 
 def dbsum(x):
     y = np.sum(10 ** (x / 10))
@@ -181,7 +151,7 @@ def detector_plot(
     psd_image = day_psd(day_df)
     pfp_image = day_pfp(day_df)
     ovr_image = day_overload(day_df)
-    doi_str = ovr_image["time"].min().date()
+    doi_str = ovr_image["time"][5,5].date()
 
     fig, axs = plt.subplots(
         1,
@@ -392,6 +362,54 @@ def day_pfp_plot(pfp_roll,freq,sensname,savename_pass=False,watermark=False,tz_i
     plt.tight_layout()
     return fig
 
+def plot_psd_csv(file_path):
+    """Plots the power spectral density saved as a .csv in the PSD directory"""
+    psd_df = pd.read_csv(file_path,index_col=0)
+    psd_df.index = pd.to_datetime(psd_df.index)
+    colormesh = plt.pcolormesh(1e-6*psd_df.columns.astype(float),psd_df.index,psd_df)
+    ax= plt.gca()
+    figure = plt.gcf()
+    figure.colorbar(colormesh,ax=ax,label="dBm/Hz")
+    plt.xlabel("Frequency (MHz)")
+    plt.ylabel("Time (UTC)")
+    plt.show()
+
+def plot_pfp_csv(file_path,frequency=3605e6):
+    """Plots the periodic frame power saved as a .csv in the PFP directory,
+      with the option to select a specific frequency"""
+    pfp_df= pd.read_csv(file_path,index_col=0)
+    pfp_df.index = pd.to_datetime(pfp_df.index,format='mixed')
+    #data selection
+    x_data = np.linspace(0,10,560)
+    selected_data = pfp_df[pfp_df["frequency"]==frequency]
+    selected_data = selected_data.drop("frequency",axis=1)
+    #plotting
+    fig, ax = plt.subplots()
+    colormesh = ax.pcolormesh(x_data,selected_data.index,selected_data,cmap="viridis")
+    ax.set_ylabel("Time (UTC)")
+    ax.set_xlabel("Periodic Frame Time (ms) ")
+    fig.colorbar(colormesh,ax=ax,label="dBm/10 MHz")
+    plt.show()
+
+def plot_summary_csv(file_path,sensor="HU",stream="max"):
+    """Plots the summary data saved as a .csv in the Summaries directory,
+      with the option to select a sensor and a stream (max,mean, or median)"""
+    summary = pd.read_csv(file_path)
+    summary["acquisition_timestamp"] = pd.to_datetime(summary["acquisition_timestamp"],
+    format="mixed")
+    selected_data=summary[summary["sensor_name"]==sensor]
+    pivot = selected_data.pivot(index="acquisition_timestamp",
+    columns="channel_frequency_mhz", values=stream)
+    colormesh=plt.pcolormesh(pivot.columns,pivot.index,pivot.values,
+    cmap="viridis",rasterized=True)
+    plt.ylabel("Time (UTC)")
+    plt.xlabel("Frequency (MHz)")
+    figure = plt.gcf()
+    figure.colorbar(colormesh,label="dBm/10 MHz")
+    file_name = os.path.basename(file_path)
+    plt.title(f"{sensor} for {file_name.replace('.csv','')}")
+    plt.tight_layout()
+    plt.show()
 
 # -----------------------------------------------------------------------------
 # Module Classes
@@ -796,7 +814,7 @@ class DataProductPlotter():
                 plt.show()  
                 
     def plot_gains(self,**options):
-            """Plots the gain for the selected capture across all frequencies."""
+            """Plots the apd for the selected capture, provide the capture_id as a dictionary"""
             defaults = {"legend":False,
                         "save":False,
                         "show":True,
@@ -821,7 +839,7 @@ class DataProductPlotter():
                 plt.show()      
 
     def plot_noise_figures(self,**options):
-            """Plots the noise figures for the selected capture across all frequencies."""
+            """Plots the apd for the selected capture, provide the capture_id as a dictionary"""
             defaults = {"legend":False,
                         "save":False,
                         "show":True,
@@ -995,22 +1013,22 @@ class SummaryPlotter():
 # Module Scripts
 
 
-def test_single_plotter(test_data = r".\resources\test data\2024_6_14_21_37_1.sigmf",**options):
+def test_single_plotter(test_data = r".\test data\2024_6_14_21_37_1.sigmf",**options):
     data_product = DataProduct(test_data)
     plotter = DataProductPlotter(data_product)
     plotter.plot_all_psds(show=True)
 
-def test_pfp_histogram(test_data = r".\resources\test data\2024_6_14_21_37_1.sigmf",**options):
+def test_pfp_histogram(test_data = r".\test data\2024_6_14_21_37_1.sigmf",**options):
     data_product = DataProduct(test_data)
     plotter = DataProductPlotter(data_product)
     plotter.plot_channel_pfp_hist(channel=5,show=True)
 
-def test_block_plotter(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",**options):
+def test_block_plotter(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",**options):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_day(show=True)
 
-def test_slice(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",slice_time ="2024-07-04 12:00" ,**options):
+def test_slice(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",slice_time ="2024-07-04 12:00" ,**options):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_day(show=True,annotation_date = slice_time)
@@ -1018,7 +1036,7 @@ def test_slice(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.go
     single_plotter = DataProductPlotter(slice)
     single_plotter.plot_channel_summary(channel = slice.frequencies[10],show=True)
 
-def test_summary_plotter(test_data = r".\resources\test data\2024_7.csv"):
+def test_summary_plotter(test_data = r".\test data\2024_7.csv"):
     summary = SummaryTable(test_data)
     plotter = SummaryPlotter(summary)
     plotter.plot_all_sensor_heatmaps(show =True,sensors = ["GMM"],streams=["max","mean","PAPR"])
@@ -1028,17 +1046,17 @@ def test_summary_plotter_2(test_data = r"D:\SEA\Tier 2\summaries\2024_9.csv"):
     plotter = SummaryPlotter(summary)
     plotter.plot_all_sensor_heatmaps(show =True,streams=["max","mean","PAPR"])
 
-def test_summary_scatterplot(test_data =r".\resources\test data\2024_7.csv"):
+def test_summary_scatterplot(test_data =r".\test data\2024_7.csv"):
     summary = SummaryTable(test_data)
     plotter = SummaryPlotter(summary)
     plotter.plot_scatter_summary(show =True)
 
-def test_psd_day_plot(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",capture_statistic="mean"):
+def test_psd_day_plot(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",capture_statistic="mean"):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_day_psd(show=True,capture_statistic=capture_statistic)
 
-def test_pfp_day_plot(test_data = r".\resources\test data\2024-7-4_seadog07.its.ntia.gov.zip",channel =5,capture_statistic="mean"):
+def test_pfp_day_plot(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip",channel =5,capture_statistic="mean"):
     data_product = DayBlock(file_path=test_data)
     plotter = DayBlockPlotter(data_product)
     plotter.plot_aligned_pfp(channel=channel,show=True,capture_statistic=capture_statistic)
@@ -1064,9 +1082,14 @@ def make_all_day_plots(top_directory,output_directory,exclude="seadog08",include
         if not force_new:
             if plot_name in destination_names:
                 continue
-        day_block = DayBlock(file_path=os.path.join(top_directory,file_name))
-        plotter = DayBlockPlotter(day_block)
-        plotter.plot_day(savename_pass = output_directory)
+        try:
+            day_block = DayBlock(file_path=os.path.join(top_directory,file_name))
+            plotter = DayBlockPlotter(day_block)
+            plotter.plot_day(savename_pass = output_directory)
+        except Exception as e:
+            print(f"The plot has failed for {plot_name}")
+            print(e)
+
 
 
 def production_data_to_tier2(production_directory = r"C:\Users\sandersa\Box\Production Data",
@@ -1158,12 +1181,13 @@ if __name__=="__main__":
     #test_summary_scatterplot(r"D:\SEA\Tier 2\summaries\2024_9.csv")
     #test_psd_day_plot(capture_statistic="median")
     #test_pfp_day_plot(channel=9)
-    production_data_to_tier2(force_new = False)
-    production_data_to_tier2(tier2_directory=r"C:\Users\sandersa\Box\Oceana",include="Oceana|seadog10",exclude=None)
-    production_data_to_tier2(tier2_directory=r"C:\Users\sandersa\Box\Pendleton",include="Pendleton|seadog08",exclude=None)
-    summarize_by_month(top_directory=r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Raw Data",output_directory=r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Summaries",force_new=True)
-    #production_data_to_tier2(tier2_directory=r"\\kipp-smb.nist.gov\ctl\675\675-01\Internal NIST Collaboration\SEA Data\GMM",include="GMM|seadog07",exclude=None)
-    summarize_by_month(top_directory=r"C:\Users\sandersa\Box\Pendleton\Raw Data",output_directory=r"C:\Users\sandersa\Box\Pendleton\Summaries",
-                      include="Pendleton|seadog08",exclude=None,force_new=True)
-    summarize_by_month(top_directory=r"C:\Users\sandersa\Box\Oceana\Raw Data",output_directory=r"C:\Users\sandersa\Box\Oceana\Summaries",
-                      include="Oceana|seadog10",exclude=None,force_new=True)
+    # production_data_to_tier2(force_new = False)
+    # production_data_to_tier2(tier2_directory=r"C:\Users\sandersa\Box\Oceana",include="Oceana|seadog10",exclude=None)
+    # production_data_to_tier2(tier2_directory=r"C:\Users\sandersa\Box\Pendleton",include="Pendleton|seadog08",exclude=None)
+    # summarize_by_month(top_directory=r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Raw Data",output_directory=r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Summaries",force_new=True)
+    # #production_data_to_tier2(tier2_directory=r"\\kipp-smb.nist.gov\ctl\675\675-01\Internal NIST Collaboration\SEA Data\GMM",include="GMM|seadog07",exclude=None)
+    # summarize_by_month(top_directory=r"C:\Users\sandersa\Box\Pendleton\Raw Data",output_directory=r"C:\Users\sandersa\Box\Pendleton\Summaries",
+    #                   include="Pendleton|seadog08",exclude=None,force_new=True)
+    # summarize_by_month(top_directory=r"C:\Users\sandersa\Box\Oceana\Raw Data",output_directory=r"C:\Users\sandersa\Box\Oceana\Summaries",
+    #                   include="Oceana|seadog10",exclude=None,force_new=True)
+    print("Currently this module does nothing when run as a script, but test functions are available to run individual pieces of functionality. See the function definitions for more details.")

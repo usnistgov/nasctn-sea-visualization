@@ -5,13 +5,12 @@
 # Created:     2025/08/25
 # License:     NIST License
 # -----------------------------------------------------------------------------
-"""data_models.py is a module that adds functionality to https://github.com/usnistgov/nasctn-sea-ingest. 
-The data models are intended to lower the barrier of entry to plotting and data analysis.
+"""data_models.py is a module that adds functionality to https://github.com/usnistgov/nasctn-sea-ingest. The data models are intended to lower the barrier of entry to plotting and data analysis
 """
 # -----------------------------------------------------------------------------
 # Standard Imports
 import os 
-import numexpr as ne
+#import numexpr as ne
 import tarfile
 import json
 import re
@@ -25,6 +24,7 @@ import shutil
 import numpy as np
 import pandas as pd
 import sea_ingest
+import scipy.signal as signal
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -66,6 +66,10 @@ DATABLOCK_PATTERN = "(?P<date>\d+-\d+-\d+)_(?P<sensor_hostname>\S*|-*).zip"
 BLOCK_MONTH_PATTERN = r"(?P<year>\d+)-(?P<month>\d+)-\d+_\S+|-*.zip"
 LTE_TTI_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    r"resources/LTE-tti_config_2_subf_2.xlsx")
+#Reference Waveform Build 
+# this is based on LTE config 2, special config 7 as per dhagle.in/LTE
+a = np.append(np.ones(3*14*4+10*4),np.zeros(4*4+14*4))
+LTE_27=pd.Series(np.roll(np.append(a,a),167))
 
 # -----------------------------------------------------------------------------
 # Module Functions
@@ -106,7 +110,6 @@ def lin_sum(array):
     alin = 10**(array/10)
     alin = alin.sum()
     return 10*np.log10(alin)
-
 def fetch_lte_template(file_path = LTE_TTI_CONFIG_PATH):
     ## Importing the Resource Element Utilization of LTE
     # The LTE xlsx were built by transcribing from: https://dhagle.in/LTE.php
@@ -154,10 +157,29 @@ def fetch_lte_template(file_path = LTE_TTI_CONFIG_PATH):
     output["ps_pfp_20"] = ps_pfp_20
     return output
 
+#normalizes a vector that is in form of a pandas Series/DataFrame
+def norm(x):
+    xmin = x.min()
+    xmax = x.max()
+    return (x-xmin)/(xmax-xmin)
+#input x: the PFP vector as row in a Pandas DataFrame
+#input r: the reference waveform as a Pandas Series
+    #in this case LTE Config 2, Special Config 7, scaled from 1 - 0 on the same vector axis as a pfp
+#windowsize is the integer to perform a rolling max over, 28 corresponds to 1 slot//
+#norm(x) returns a normalized vector. 
+
+def corr_coeff_window(x,r,windowsize = 28):
+    start_int = windowsize-1
+    xr = norm(x).rolling(window=windowsize).max()[start_int:]
+    rr = r.rolling(window=windowsize).max()[start_int:]
+    correlation = signal.correlate(rr-np.mean(rr),xr-np.mean(xr))
+    lag = correlation.argmax()-(len(rr) - 1)
+    x_corrected = np.roll(x,lag)
+    return x_corrected
 # -----------------------------------------------------------------------------
 # Module Classes
 class DataProduct():
-    """Wraps the sea_ingest dictionary of pandas data frames that represents a single acquisition of the sea sensor  """
+    """Wraps the sea_ingest dictionary of pandas data frames that represents a single acquistion of the sea sensor  """
     def __init__(self,data,**options) -> None:
         if isinstance(data,str):
             if re.search(".sigmf",data):
@@ -322,10 +344,12 @@ class DayBlock():
             frequency = self.frequencies[channel]
         else:
             frequency = float(channel)
+
         template = fetch_lte_template()
         ps_pfp_20 = template['ps_pfp_20']
         dm = self.data['pfp'].xs((frequency,capture_statistic,detector),level=('frequency','capture_statistic','detector'))
         droll = dm.apply(lambda x: roll_max(x,ps_pfp_20),axis=1,result_type='expand')
+        droll=droll.T.apply(lambda x: corr_coeff_window(x,LTE_27)).T
         if save:
             if re.search("csv",save_type,re.IGNORECASE):
                 droll.to_csv(save)
@@ -345,6 +369,7 @@ class DayBlock():
             ps_pfp_20 = template['ps_pfp_20']
             dm = self.data['pfp'].xs((frequency,capture_statistic,detector),level=('frequency','capture_statistic','detector'))
             droll = dm.apply(lambda x: roll_max(x,ps_pfp_20),axis=1,result_type='expand')
+            droll = droll.T.apply(lambda x: corr_coeff_window(x,LTE_27)).T
             droll.insert(0,"frequency",frequency*np.ones(len(dm.index)))
             if channel_index == 0:
                 day_store = droll.copy()
@@ -451,7 +476,6 @@ def create_summary_table_flat_files(top_directory,save_location = None,verbose =
                             data_row["overload"] = capture['ntia-sensor:overload']
                             data.append(data_row)
                     except Exception as e:
-                        raise
                         print(e)
                         continue
     df = pd.DataFrame(data)
@@ -512,7 +536,6 @@ def append_summary_table_flat_files(top_directory,current_summary_table,save_loc
                             data_row["overload"] = capture['ntia-sensor:overload']
                             data.append(data_row)
                     except Exception as e:
-                        raise
                         print(e)
                         continue
     df = pd.DataFrame(data)
@@ -568,7 +591,6 @@ def summarize_block(file_name,root_directory,verbose):
                 print(e)
                 continue
         return data
-    
 def summarize_block_calibration(file_name,root_directory,verbose):
     data = []
     match = re.match(DATABLOCK_PATTERN,file_name)
@@ -608,12 +630,44 @@ def summarize_block_calibration(file_name,root_directory,verbose):
                     data_row["mean"]=metadata.global_.mean_channel_powers[capture_index]
                     data_row["overload"] = capture['ntia-sensor:overload']
                     data_row.update(capture["ntia-sensor:sensor_calibration"])
+                    data_row.update(capture["ntia-sensor:sigan_settings"])
                     data.append(data_row)
             except Exception as e:
                 print(e)
                 continue
         return data
-    
+def create_calibration_summary(top_directory = None,file_names = None,save = None,
+                                     verbose =False,sort_timestamps=True, relative_filenames  = True):
+    """ Creates the summary table from a directory of raw files. Returns a pandas dataframe."""
+    data = []
+    if top_directory:
+        for root_directory,directories,file_names in os.walk(top_directory):
+                for file_name in file_names:
+                    if re.search(".zip",file_name,re.IGNORECASE):
+                        if verbose:
+                            print(f'the file_name is {file_name}')
+                        data_row = summarize_block_calibration(file_name,root_directory=root_directory,verbose=verbose)
+                        data.extend(data_row)
+
+    elif file_names:
+            for file_name in file_names:
+                if re.search(".zip",file_name,re.IGNORECASE):
+                    root_directory = os.path.dirname(file_name)
+                    file_name = os.path.basename(file_name)
+                    if verbose:
+                        print(f'the file_name is {file_name}')
+                    data_row = summarize_block_calibration(file_name,root_directory=root_directory,verbose=verbose)
+                    data.extend(data_row)
+    df = pd.DataFrame(data)
+    if sort_timestamps:
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df.sort_values(by = ['timestamp'],inplace=True)
+    if relative_filenames:
+        df['file'] = df['file'].apply(lambda x:os.path.relpath(x,os.path.dirname(x)))
+    if save:
+        df.to_csv(save,index=False)      
+    return df
+        
 def create_summary_table_data_blocks(top_directory = None,file_names = None,save = None,
                                      verbose =False,sort_timestamps=True, relative_filenames  = True):
     """ Creates the summary table from a directory of raw files. Returns a pandas dataframe."""
@@ -696,7 +750,6 @@ def copy_and_rename(production_directory,output_directory,exclude = "seadog08|se
         try:
             shutil.copyfile(old_file_path,new_file_path)
         except Exception as e:
-            raise
             print(e)
 
 def save_all_psd(top_directory,output_directory,capture_statistics=["mean","median","95th_percentile","99th_percentile","max"],exclude=None,include=None,force_new = False):
@@ -724,8 +777,12 @@ def save_all_psd(top_directory,output_directory,capture_statistics=["mean","medi
             if not force_new:
                 if psd_path in destination_names:
                     continue
-            day_block = DayBlock(file_path=os.path.join(top_directory,file_name))
-            day_block.get_day_psd(capture_statistic=capture_statistic,save=psd_path)
+            try:
+                day_block = DayBlock(file_path=os.path.join(top_directory,file_name))
+                day_block.get_day_psd(capture_statistic=capture_statistic,save=psd_path)
+            except Exception as e:
+                print(f'File:{os.path.join(top_directory,file_name)} failed')
+                print(e)
 
 def save_all_pfp(top_directory,output_directory,capture_statistics=["mean"], 
                  detectors =["rms"],exclude=None, include=None,force_new = False):
@@ -754,13 +811,17 @@ def save_all_pfp(top_directory,output_directory,capture_statistics=["mean"],
                 if not force_new:
                     if pfp_path in destination_names:
                         continue
-                day_block = DayBlock(file_path=os.path.join(top_directory,file_name))
-                day_block.get_day_aligned_pfp(capture_statistic=capture_statistic,detector=detector,save=pfp_path)
- 
+                try:
+                    day_block = DayBlock(file_path=os.path.join(top_directory,file_name))
+                    day_block.get_day_aligned_pfp(capture_statistic=capture_statistic,detector=detector,save=pfp_path)
+                except Exception as e:
+                    print(f'file: {os.path.join(top_directory,file_name)} failed')
+                    print(e)
 
 
 def test_aligned_pfp(test_data = r".\test data\2024-7-4_seadog07.its.ntia.gov.zip"):
     dayblock = DayBlock(file_path=test_data)
+    print(dayblock.sensor_hostname)
     pfp = dayblock.get_aligned_pfp(4)
     print(pfp)
 
@@ -771,9 +832,10 @@ def test_day_aligned_pfp(test_data = r".\test data\2024-7-4_seadog07.its.ntia.go
 # -----------------------------------------------------------------------------
 # Module Runner
 if __name__=="__main__":
-    summarize_by_month(r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Raw Data",r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Summaries",force_new=True)
+    #summarize_by_month(r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Raw Data",r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Summaries",force_new=True)
     #copy_and_rename(r"C:\Users\sandersa\Box\Production Data",r"D:\SEA\test_zip_files")
-    #test_aligned_pfp()
+    # test_aligned_pfp()
     #test_day_aligned_pfp()
     #save_all_psd(r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Raw Data",r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\PSD")
     #save_all_pfp(r"C:\Users\sandersa\Box\SEA-Tier2 - REV1\Raw Data",r'C:\Users\sandersa\Box\SEA-Tier2 - REV1\PFP Aligned')
+    print("Currently this module does nothing when run as a script, but test functions are available to run individual pieces of functionality. See the function definitions for more details.")
