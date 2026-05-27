@@ -110,6 +110,7 @@ def lin_sum(array):
     alin = 10**(array/10)
     alin = alin.sum()
     return 10*np.log10(alin)
+
 def fetch_lte_template(file_path = LTE_TTI_CONFIG_PATH):
     ## Importing the Resource Element Utilization of LTE
     # The LTE xlsx were built by transcribing from: https://dhagle.in/LTE.php
@@ -472,7 +473,7 @@ def create_summary_table_flat_files(top_directory,save_location = None,verbose =
                             data_row["date"] = str(data_row["timestamp"].date())
                             data_row["max"]=metadata.global_.max_of_max_channel_powers[capture_index]
                             data_row["median"]=metadata.global_.median_channel_powers[capture_index]
-                            data_row["median"]=metadata.global_.mean_channel_powers[capture_index]
+                            data_row["mean"]=metadata.global_.mean_channel_powers[capture_index]
                             data_row["overload"] = capture['ntia-sensor:overload']
                             data.append(data_row)
                     except Exception as e:
