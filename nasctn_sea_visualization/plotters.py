@@ -409,8 +409,7 @@ def plot_summary_csv(file_path,sensor="HU",stream="max"):
     """Plots the summary data saved as a .csv in the Summaries directory,
       with the option to select a sensor and a stream (max,mean, or median)"""
     summary = pd.read_csv(file_path)
-    summary["acquisition_timestamp"] = pd.to_datetime(summary["acquisition_timestamp"],
-    format="mixed")
+    summary["acquisition_timestamp"] = pd.to_datetime(summary["acquisition_timestamp"])
     selected_data=summary[summary["sensor_name"]==sensor]
     pivot = selected_data.pivot(index="acquisition_timestamp",
     columns="channel_frequency_mhz", values=stream)

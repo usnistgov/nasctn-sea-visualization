@@ -22,7 +22,7 @@ sys.path.append(os.path.join(os.path.dirname( __file__ ), '..'))
 # Module Constants
 VERBOSE_IMPORT = True
 TIMED_IMPORT = True
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 "Constant that determines if import statements are echoed to output"
 # The new module load scheme can be for module in DE_API_MODULES.keys()
 # -----------------------------------------------------------------------------
