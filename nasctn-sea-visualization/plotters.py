@@ -40,6 +40,20 @@ sys.path.append(os.path.join(os.path.dirname( __file__ ),'.'))
 # Module Constants
 # -----------------------------------------------------------------------------
 # Module Functions
+def summary_classifier(MMPR,PMPR,
+                              cbrs_slope=1.25,cbrs_intercept=18.5,cbrs_tolerance=7,cbrs_min_mmpr=2.25,
+                              noise_mmpr_min=1,noise_mmpr_max=2.5,noise_pmpr_min =13,noise_pmpr_max = 35):
+    """Uses the peak to median power ratio and mean to median power ratio to determine 
+    category. Category 0 - CBSD, 1- Noise, 2- Signal. The CBRS model is a simple linear model 
+    (cbrs_slope*mmpr+cbrs_intercept) with a tolerance. The Noise model is a simple check to see if the value is within the rectangular region
+    made by noise_mmpr_min,noise_mmpr_max,noise_pmpr_min,and noise_pmpr_max. """
+    if (MMPR>cbrs_min_mmpr)&(np.abs(PMPR-(cbrs_slope*MMPR+cbrs_intercept))<cbrs_tolerance):
+        return 0
+    elif (noise_mmpr_min<MMPR<noise_mmpr_max)&(noise_pmpr_min<PMPR<noise_pmpr_max):
+        return 1
+    else:
+        return 2 
+classifier_  = np.vectorize(summary_classifier)
 
 def dbsum(x):
     y = np.sum(10 ** (x / 10))
