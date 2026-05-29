@@ -18,7 +18,7 @@ This package is sensitive to the requirements for [nasctn-sea-ingest](https://gi
 <hr/>
 An example batch file to load the requirements:
 
-```DOS 
+```batch 
 call "%LOCALAPPDATA%\miniforge3\Scripts\activate.bat" 
 call conda create -n sea python=3.9.23
 call conda activate sea
