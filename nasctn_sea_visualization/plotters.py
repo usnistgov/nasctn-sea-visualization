@@ -929,6 +929,88 @@ class DayBlockPlotter():
             plt.savefig(plot_options["save"])
         if plot_options["show"]:
             plt.show()                 
+    def plot_day_link_separation(self,channel,
+                                 capture_statistic='mean',detector='rms',**options):
+        """Plots the median of the align PFP capture statistic and detector and displays the days statistics seperated by time"""
+        defaults = {"ul1_start_time":2.0,
+                    "ul1_stop_time":3.0,
+                    "ul2_start_time":7.0,
+                    "ul2_stop_time":8.0,
+                    "save":False,
+                    "show":True}
+        plot_options = {}
+        for key,value in defaults.items():
+            plot_options[key] = value
+        for key,value in options.items():
+            plot_options[key] = value
+        if channel in self.data_product.frequencies:
+            frequency = channel
+        elif isinstance(channel,int):
+            frequency = self.data_product.frequencies[channel]
+        else:
+            frequency = float(channel)
+        bins = 50
+        pfp_ = self.data_product.get_aligned_pfp(channel=frequency,capture_statistic=capture_statistic,detector=detector)
+        median_pfp = np.median(pfp_,axis=0)
+        max_pfp = max(pfp_.max())
+        x_axis = np.linspace(0,10,len(pfp_.columns))
+        ul1_start = np.argmin(abs(x_axis-plot_options["ul1_start_time"]))
+        ul1_stop = np.argmin(abs(x_axis-plot_options["ul1_stop_time"]))
+        ul2_start = np.argmin(abs(x_axis-plot_options["ul2_start_time"]))
+        ul2_stop = np.argmin(abs(x_axis-plot_options["ul2_stop_time"]))
+        ul_mask = np.zeros(len(x_axis),dtype=bool)
+        for i in range(len(x_axis)):
+            if ul1_start<i<ul1_stop or ul2_start<i<ul2_stop:
+                ul_mask[i]=True
+        
+        uplink = pfp_.iloc[:,ul_mask]
+        downlink= pfp_.iloc[:,~ul_mask]
+
+        text_y = median_pfp.max()+2
+        y_offset_plot = 2.5
+        noise_figure_estimate = np.median(self.data_product.noise_figures[frequency])
+        noise_floor_estimate = -174 + 70 + noise_figure_estimate
+        figure = plt.figure(figsize=(10,4))
+        gs = matplotlib.gridspec.GridSpec(2,3)
+        ax1 = figure.add_subplot(gs[:, 0:2])
+        ax2 = figure.add_subplot(gs[0, 2])
+        ax3 = figure.add_subplot(gs[1, 2],sharex=ax2)
+
+        ax1.fill_between(x_axis,median_pfp,noise_floor_estimate,label="Median",hatch='/',color="grey",alpha=.5)
+        ax1.fill_between(x_axis[ul_mask],median_pfp[ul_mask],noise_floor_estimate,
+                        label="Median",hatch='/',color="green",alpha=.5,where =(x_axis[ul_mask]< plot_options["ul1_stop_time"]) )
+        ax1.fill_between(x_axis[ul_mask],median_pfp[ul_mask],noise_floor_estimate,
+                        label="Median",hatch='/',color="green",alpha=.5,where =(x_axis[ul_mask]> plot_options["ul1_stop_time"]) )
+                        
+
+        #plt.plot(x_axis,np.mean(pfp_),label="Mean")
+        ax1.axvline(plot_options["ul1_start_time"],color="r",linewidth=5,linestyle="dashed")
+        ax1.axvline(plot_options["ul1_stop_time"],color="r",linewidth=5,linestyle="dashed")
+        ax1.axvline(plot_options["ul2_start_time"],color="r",linewidth=5,linestyle="dashed")
+        ax1.axvline(plot_options["ul2_stop_time"],color="r",linewidth=5,linestyle="dashed")
+        ax1.axhline(noise_floor_estimate,color="k",linewidth=5,linestyle="dashed")
+        ax1.text(2.25,text_y,"UL")
+        ax1.text(7.25,text_y,"UL")
+        ax1.text(.75,text_y,"DL")
+        ax1.text(4.75,text_y,"DL")
+        ax1.text(8.75,text_y,"DL")
+        ax1.set_ylim([noise_floor_estimate-y_offset_plot,max_pfp+y_offset_plot])
+        ax1.set_xlabel("Time (ms)")
+        ax1.set_ylabel(r"$Power (\frac{dBm}{10 MHz})$")
+        ax1.set_title(f"{self.data_product.date} - {self.data_product.sensor}, {frequency*1e-6} MHz, median of {detector}-{capture_statistic}")
+        ax1.grid()
+        ax2.hist(uplink.values.flatten(),density=True,bins=bins,hatch='/',color="green",alpha=.5)
+        ax2.text(0.5, 0.5, 'UL', ha='center', va='center', transform=ax2.transAxes)
+        ax2.grid()
+        ax3.hist(downlink.values.flatten(),density=True,bins=bins,hatch='/',color="gray",alpha=.5)
+        ax3.text(0.5, 0.5, 'DL', ha='center', va='center', transform=ax3.transAxes)
+        ax3.grid()
+        ax3.set_xlabel(r"$Power (\frac{dBm}{10 MHz})$")
+        plt.tight_layout()
+        if plot_options["save"]:
+            plt.savefig(plot_options["save"])
+        if plot_options["show"]:
+            plt.show()                 
 
 class SummaryPlotter():
     def __init__(self,data) -> None:
@@ -951,9 +1033,13 @@ class SummaryPlotter():
             plot_options[key] = value                
         number_sensors = len(plot_options["sensors"])
         number_streams = len(plot_options["streams"])
-        if number_sensors==1:
-            figure, axes = plt.subplots(nrows=number_streams,ncols=number_sensors,sharey=True,sharex=True,figsize=(20,9))
-            axes = np.reshape(axes,[number_streams,1])
+        if number_sensors==1 or number_streams==1:
+            if number_sensors == 1:
+                figure, axes = plt.subplots(nrows=number_streams,ncols=number_sensors,sharey=True,sharex=True,figsize=(20,9))
+                axes = np.reshape(axes,[number_streams,1])
+            if number_streams==1:
+                figure, axes = plt.subplots(nrows=number_streams,ncols=number_sensors,sharey=True,sharex=True,figsize=(20,9))
+                axes = np.reshape(axes,[1,number_sensors])                
         else:
             figure, axes = plt.subplots(nrows=number_streams,ncols=number_sensors,sharey=True,sharex=True,figsize=(20,9))
         for sensor_index,sensor in enumerate(plot_options["sensors"]):
