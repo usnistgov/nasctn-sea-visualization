@@ -392,7 +392,7 @@ def plot_pfp_csv(file_path,frequency=3605e6):
     """Plots the periodic frame power saved as a .csv in the PFP directory,
       with the option to select a specific frequency"""
     pfp_df= pd.read_csv(file_path,index_col=0)
-    pfp_df.index = pd.to_datetime(pfp_df.index,format='mixed')
+    pfp_df.index = pd.to_datetime(pfp_df.index)
     #data selection
     x_data = np.linspace(0,10,560)
     selected_data = pfp_df[pfp_df["frequency"]==frequency]
