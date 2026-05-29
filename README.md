@@ -8,25 +8,30 @@ pip install git+https://github.com/usnistgov/nasctn-sea-visualization.git
 ```
 ## Method 2 - Clone then Install
 1. Use your favorite way to clone the repo or download the zip file and extract it.  
-2. pip install to that location (note pip expects a unix style string 'C:/univariate_tools/')
+2. pip install to that location (note pip expects a unix style string 'C:/nasctn-sea-visualization/')
 
 ```shell
 pip install <path to top folder>
 ```
+
 # Use case
 Once you have access to the NASCTN CBRS SEA data, you need plots or tables for analysis purposes. 
+
 # Workflow
 1. Access the [NASCTN CBRS SEA Data](https://pages.nist.gov/SEA-DATA/) 
-2. Typically a 
+2. Choose the date and sensor of interest
+3. If the desired data is in csv format (PSD, PFP, Summary) plot directly from there (data footprint is much smaller)
+4. If in-depth analysis is required for the (day, sensor) combination, load the data from Raw Data directory using the DayBlock class. This class has several different methods for producing flat tables and other data slices. 
+5. If plots are required create a DayBlockPlotter object by passing it the DayBlock object from 4.
+6. Plot  
 
 
 ## Example use
 ```python
 import sys 
 import os
-sys.path.append(r"C:\Users\sandersa\VSCode Repos\sea_tier2_addons") #this should point to your local installation directory
-from data_models import *
-from plotters import *
+from nasctn_sea_visualization.data_models import *
+
 ``` 
 
 ## Common Plots
@@ -35,9 +40,8 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-sys.path.append(r"C:\Users\sandersa\VSCode Repos\sea_tier2_addons") #this should point to your local installation directory
-from data_models import *
-from plotters import *
+
+from nasctn_sea_visualization import *
 hu_path = r".\Raw Data\2024-08-10_HU.zip"
 hu_day_block = DayBlock(file_path = hu_path)
 hu_plotter = DayBlockPlotter(hu_day_block)
@@ -61,9 +65,7 @@ hu_slice_plotter.plot_all_psds()
 #plots a single channel pfp
 hu_slice_plotter.plot_channel_pfp(hu_day_block.frequencies[0])
 ```
-
-# Example
-An [example](./examples/Example.ipynb) of opening data, reshaping it to tables of interest and plotting common elements.
+For further examples see [example](./examples/Example.ipynb) of opening data, reshaping it to tables of interest and plotting common elements.
 
 # API Documentation
 The [API Documentation](https://pages.nist.gov/nasctn-sea-visualization) links to the __init__.py file and has the primary submodules linked. 
