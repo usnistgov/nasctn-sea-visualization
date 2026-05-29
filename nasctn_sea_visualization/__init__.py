@@ -20,15 +20,15 @@ sys.path.append(os.path.join(os.path.dirname( __file__ ), '..'))
 
 # -----------------------------------------------------------------------------
 # Module Constants
-VERBOSE_IMPORT = False
-TIMED_IMPORT = False
-__version__ = "0.1.3"
+VERBOSE_IMPORT = True
+TIMED_IMPORT = True
+__version__ = "0.1.4"
 "Constant that determines if import statements are echoed to output"
 # The new module load scheme can be for module in DE_API_MODULES.keys()
 # -----------------------------------------------------------------------------
 DE_API_MODULES = {"nasctn_sea_visualization.data_models":True,
                   "nasctn_sea_visualization.plotters":True,
-                  "nasctn_sea_visualization.reports":True}
+                  "nasctn_sea_visualization.reports":False}
 "Dictionary that controls the definition of the API, this can be set to leave out any unwanted modules. Also it is" \
     "possible to discover all modules by DE_API_MODULES.keys()"
 
