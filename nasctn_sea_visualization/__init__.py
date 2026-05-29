@@ -26,9 +26,9 @@ __version__ = "0.1.2"
 "Constant that determines if import statements are echoed to output"
 # The new module load scheme can be for module in DE_API_MODULES.keys()
 # -----------------------------------------------------------------------------
-DE_API_MODULES = {"nasctn-sea-visualization.data_models":True,
-                  "nasctn-sea-visualization.plotters":True,
-                  "nasctn-sea-visualization.reports":True}
+DE_API_MODULES = {"nasctn_sea_visualization.data_models":True,
+                  "nasctn_sea_visualization.plotters":True,
+                  "nasctn_sea_visualization.reports":True}
 "Dictionary that controls the definition of the API, this can be set to leave out any unwanted modules. Also it is" \
     "possible to discover all modules by DE_API_MODULES.keys()"
 
