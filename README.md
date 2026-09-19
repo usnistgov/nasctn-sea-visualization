@@ -94,9 +94,9 @@ hu_slice_plotter.plot_all_psds()
 hu_slice_plotter.plot_channel_pfp(hu_day_block.frequencies[0])
 ```
 For a general example see [example](./examples/Example.ipynb), for a specific example of opening data, reshaping it to tables of interest see [Example of Getting Data Products](./examples/Example_of_Getting_Data_Products.ipynb).
-<!-- 
+
 # API Documentation
-The [API Documentation](https://pages.nist.gov/nasctn-sea-visualization) links to the __init__.py file and has the primary submodules linked.  -->
+The [API Documentation](https://pages.nist.gov/nasctn-sea-visualization) links to the __init__.py file and has the primary submodules linked.  
 
 # Contact
 Aric Sanders [aric.sanders@nist.gov](mailto:aric.sanders@nist.gov)
