@@ -32,7 +32,22 @@ call pip install scipy==1.11.0
 Once you have access to the NASCTN CBRS SEA data, you need plots or tables for analysis purposes. 
 
 # Workflow
-1. Access the [NASCTN CBRS SEA Data](https://pages.nist.gov/SEA-DATA/) 
+1. Access the [NASCTN CBRS SEA Data](https://pages.nist.gov/SEA-DATA/) , for a single day you can use this code snippet to download data:
+```python
+import requests
+
+url = "https://data.nist.gov/od/ds/mds2-4214/Raw%20Data/2024-07-15_GMM.zip"
+local_filename = "2024-07-15_GMM.zip"
+
+# Send a GET request to the URL
+response = requests.get(url)
+
+# Open a local file in write-binary mode and save the content
+with open(local_filename, "wb") as file:
+    file.write(response.content)
+```
+
+
 2. Choose the date and sensor of interest
 3. If the desired data is in csv format (PSD, PFP, Summary) plot directly from there (data footprint is much smaller)
 4. If in-depth analysis is required for the (day, sensor) combination, load the data from Raw Data directory using the DayBlock class. This class has several different methods for producing flat tables and other data slices. 
@@ -78,7 +93,7 @@ hu_slice_plotter.plot_all_psds()
 #plots a single channel pfp
 hu_slice_plotter.plot_channel_pfp(hu_day_block.frequencies[0])
 ```
-For further examples see [example](./examples/Example.ipynb) of opening data, reshaping it to tables of interest and plotting common elements.
+For a general example see [example](./examples/Example.ipynb), for a specific example of opening data, reshaping it to tables of interest see [Example of Getting Data Products](./examples/examples/Example of Getting Data Products.ipynb).
 <!-- 
 # API Documentation
 The [API Documentation](https://pages.nist.gov/nasctn-sea-visualization) links to the __init__.py file and has the primary submodules linked.  -->
