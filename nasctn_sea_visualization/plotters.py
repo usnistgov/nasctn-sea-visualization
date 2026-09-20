@@ -355,10 +355,10 @@ def day_pfp_plot(pfp_roll,freq,sensname,savename_pass=False,watermark=False,tz_i
 
 
 
-    axs[1].plot(pfp_roll.columns.values,roll_stats.T)
+    axs[1].plot(np.linspace(0,10,560),roll_stats.T)
     axs[1].legend(roll_stats.index,ncol=len(roll_stats.index),loc=3)
     axs[1].set_ylabel('Power (dBm/10 MHz)')
-    axs[1].set_xlabel('Time (s)')
+    axs[1].set_xlabel('Time (ms)')
     axs[1].set_title('Explicit Percentiles')
     
     for ax in axs:
