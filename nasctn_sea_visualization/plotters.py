@@ -327,7 +327,7 @@ def day_pfp_plot(pfp_roll,freq,sensname,savename_pass=False,watermark=False,tz_i
     
     fig,axs = plt.subplots(2,1,sharex=True,figsize=(8,7),gridspec_kw={'height_ratios': [4, 1]})
 
-    X,Y = np.meshgrid(pfp_roll.index,pfp_roll.columns.values.astype('float'))
+    X,Y = np.meshgrid(pfp_roll.index,np.linspace(0,10,560))
     droll_2dat = np.reshape(pfp_roll.values,X.T.shape).T
 
     roll_stats = pfp_roll.describe(percentiles=[0.025,0.25,0.5,0.75,0.975]).iloc[3:]
