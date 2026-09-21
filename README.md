@@ -93,7 +93,7 @@ hu_slice_plotter.plot_all_psds()
 #plots a single channel pfp
 hu_slice_plotter.plot_channel_pfp(hu_day_block.frequencies[0])
 ```
-For a general example see [example](./examples/Example.ipynb), for a specific example of opening data, reshaping it to tables of interest see [Example of Getting Data Products](./examples/Example_of_Getting_Data_Products.ipynb). For an example of comparing percentiles of power spectral density see [Comparison of PSDs](./examples/Example_Comparing_PSDs.ipynb).
+For a general example see [example](./examples/Example.ipynb), for a specific example of opening data, reshaping it to tables of interest see [Example of Getting Data Products](./examples/Example_of_Getting_Data_Products.ipynb). For an example of comparing percentiles of power spectral density see [Comparison of PSDs](./examples/Example_Comparing_PSDs.ipynb). An example of splitting CBSD activity into uplink and downlink is at [Example of DL/UL Splitting](./examples/Example_DL_UL_splitting.ipynb)
 
 # API Documentation
 The [API Documentation](https://pages.nist.gov/nasctn-sea-visualization) links to the __init__.py file and has the primary submodules linked.  
