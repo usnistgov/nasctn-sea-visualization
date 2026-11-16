@@ -14,19 +14,19 @@ pip install git+https://github.com/usnistgov/nasctn-sea-visualization.git
 pip install <path to top folder>
 ```
 # Environment Setup 
-This package is sensitive to the requirements for [nasctn-sea-ingest](https://github.com/usnistgov/nasctn-sea-ingest) and needs older versions of numpy and pandas to operate properly. It is recommended that a virtual environment is used with python 3.9.23 -
+This package is sensitive to the requirements for [nasctn-sea-ingest](https://github.com/usnistgov/nasctn-sea-ingest) 
 <hr/>
 An example batch file to load the requirements:
 
 ```batch 
 call "%LOCALAPPDATA%\miniforge3\Scripts\activate.bat" 
-call conda create -n sea python=3.9.23
+call conda create -n sea 
 call conda activate sea
 call pip install git+https://github.com/usnistgov/nasctn-sea-ingest
-call pip install seaborn==0.12.0
-call pip install hvplot==0.8.0
+call pip install seaborn
+call pip install hvplot
 call pip install openpyxl
-call pip install scipy==1.11.0
+call pip install scipy
 ```
 # Use case
 Once you have access to the NASCTN CBRS SEA data, you need plots or tables for analysis purposes. 
